@@ -7,8 +7,10 @@ const { corsOptions } = require('./src/utils/utils.cors');
 
 const PORT = 8080;
 
-
 const app = express();
+app.get("/", (req, res) => {
+  res.send("Hello from Express on Vercel!");
+});
 app.use(cors(corsOptions));
 
 app.use(express.json());
