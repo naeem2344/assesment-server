@@ -2,7 +2,6 @@ const CustomizationSchema = require("../schema/model.customization.schema");
 const ModelSchema = require("../schema/model.schema");
 
 const uploadProducts = async (req, res) => {
-    console.log("hello")
     try {
         const modelFiles = req.files['3d_model'];
         const textureFiles = req.files['3d_texture'];
@@ -27,6 +26,8 @@ const uploadProducts = async (req, res) => {
 
         await modelInstance.save();
 
+        req.io.emit('product-added', modelInstance);
+
         res.status(201).send({
             status: true,
             message: 'Product uploaded successfully',
@@ -47,6 +48,8 @@ const getAllProducts = async (req, res) => {
     try {
         const { _id } = req.user;
         const allProducts = await ModelSchema.find();
+
+        req.io.emit('get-all-product', allProducts)
         res.status(201).send({
             status: true,
             message: 'Product Fetched',
@@ -67,7 +70,7 @@ const saveCustomization = async (req, res) => {
 
     const { _id } = req.user;
     try {
-        
+
         const isPresent = await CustomizationSchema.findOne({ productName, userId: _id });
 
         // if there is no record
@@ -79,7 +82,9 @@ const saveCustomization = async (req, res) => {
             }
 
             const objectInstance = await CustomizationSchema.create(obj);
-            await objectInstance.save()
+            await objectInstance.save();
+
+            req.io.emit('save-customization', isPresent);
 
             return res.status(201).send({
                 status: true,
@@ -89,7 +94,7 @@ const saveCustomization = async (req, res) => {
 
 
         const { customization } = isPresent;
-        // there is record present but user want to update the texture in changes texture
+        // there are record already present and user want to update the texture in changes texture
         if (customization.find(item => item.name === name)) {
             const updateCustomization = customization.map(item => {
                 return item.name === name ? { ...item, url } : item
@@ -98,6 +103,7 @@ const saveCustomization = async (req, res) => {
             isPresent.customization = updateCustomization;
 
             await isPresent.save();
+            req.io.emit('save-customization', isPresent);
             return res.status(200).send({
                 status: true,
                 message: 'Customization updated'
@@ -110,7 +116,7 @@ const saveCustomization = async (req, res) => {
         });
 
         await isPresent.save();
-
+        req.io.emit('save-customization', isPresent);
 
         return res.status(200).send({
             status: true,
@@ -123,18 +129,20 @@ const saveCustomization = async (req, res) => {
     }
 }
 
-const getAllCustomization = async (req,res) =>{
+const getAllCustomization = async (req, res) => {
     const { _id } = req.user;
     try {
 
-        const allCustomization = await CustomizationSchema.find({userId: _id});
+        const allCustomization = await CustomizationSchema.find({ userId: _id });
+
+        req.io.emit('get-all-customization', allCustomization)
 
         res.status(200).send({
             status: true,
             message: "Get all cutomization",
             data: allCustomization
         })
-        
+
     } catch (error) {
         console.error(error);
         res.status(500).send({
